@@ -7,6 +7,10 @@ const config = require('config')
 const PORT = config.get('port') || 5000
 const uri =  config.get('mongoUri') || ''
 
+//middlewares
+app.use(express.json({
+    extended : true
+}))
 //routes
 app.use('/api/auth', require('./routes/auth.routes'))
 

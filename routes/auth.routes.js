@@ -1,55 +1,51 @@
 const {Router} = require('express')
-const router = Router()
 const bcrypt = require('bcryptjs')
-const User = require('../models/User')
-const {check, validationResult} = require('express-validator')
+const config = require('config')
 const jwt = require('jsonwebtoken')
+const {check, validationResult} = require('express-validator')
+const User = require('../models/User')
+const router = Router()
+
+
 // /api/auth/register
 router.post(
     '/register',
     [
-        check('email', 'Invalid email').normalizeEmail().isEmail(),
-        check('password', 'Invalid password').isLength({
-            min: 6
-        }),
+        check('email', 'Некорректный email').isEmail(),
+        check('password', 'Минимальная длина пароля 6 символов')
+            .isLength({ min: 6 })
     ],
     async (req, res) => {
         try {
             const errors = validationResult(req)
+
             if (!errors.isEmpty()) {
                 return res.status(400).json({
                     errors: errors.array(),
-                    message: 'Please enter a valid data'
+                    message: 'Некорректный данные при регистрации'
                 })
             }
-            const {email, password} = req.body //с фронтенда забираем
-            const candidate = await User.findOne({
-                email
-            }) //ищем юзера по почте
+
+            const {email, password} = req.body
+
+            const candidate = await User.findOne({ email })
+
             if (candidate) {
-                return res.status(400).json({
-                    message: 'You have already registered'
-                })
-            } //уже зарегестрирован
+                return res.status(400).json({ message: 'Такой пользователь уже существует' })
+            }
 
-            const hashedPassword = await bcrypt.hash(password, 'secret')
-            const user = new User({
-                email, password: hashedPassword
-            }) //хешируем пароль и создаем нового юзера
+            const hashedPassword = await bcrypt.hash(password, 12)
+            const user = new User({ email, password: hashedPassword })
 
-            await user.save().then(() => {
-                res.status(201).json({
-                    message: 'You have registered'
-                })
-            }) //сохраняем юзера в бд
+            await user.save()
 
-        } catch (err) {
-            if (err) throw err
-            res.status(500).json({
-                message: 'Something went wrong with registration'
-            })
+            res.status(201).json({ message: 'Пользователь создан' })
+
+        } catch (e) {
+            res.status(500).json({ message: 'Что-то пошло не так, попробуйте снова' })
         }
     })
+
 // /api/auth/login
 router.post(
     '/login',
@@ -60,48 +56,38 @@ router.post(
     async (req, res) => {
         try {
             const errors = validationResult(req)
+
             if (!errors.isEmpty()) {
                 return res.status(400).json({
                     errors: errors.array(),
-                    message: 'Please enter a valid data'
+                    message: 'Некорректный данные при входе в систему'
                 })
             }
 
             const {email, password} = req.body
-            const user = await User.findOne({
-                email
-            })
+
+            const user = await User.findOne({ email })
+
             if (!user) {
-                return res.status(400).json({
-                    errors: errors.array(),
-                    message: 'User not found'
-                })
+                return res.status(400).json({ message: 'Пользователь не найден' })
             }
-            const isMatch = await bcrypt.compare(password, user.password) //пароль с фронтенда и пароль с базы
+
+            const isMatch = await bcrypt.compare(password, user.password)
+
             if (!isMatch) {
-                return res.status(400).json({
-                    errors: errors.array(),
-                    message: 'Invalid password'
-                })
+                return res.status(400).json({ message: 'Неверный пароль, попробуйте снова' })
             }
 
             const token = jwt.sign(
-                {userId: user.id}, //что будет зашифровано
-                config.get('jwtSecret'), //секретный ключ
-                {expiresIn: '1h'} // через сколько токен перестанет работать
+                { userId: user.id },
+                config.get('jwtSecret'),
+                { expiresIn: '1h' }
             )
 
-            res.json({
-                token,
-                userId: user.id
-            })
+            res.json({ token, userId: user.id })
 
-
-        } catch (err) {
-            if (err) throw err
-            res.status(500).json({
-                message: 'Something went wrong with login'
-            })
+        } catch (e) {
+            res.status(500).json({ message: 'Что-то пошло не так, попробуйте снова' })
         }
     })
 
