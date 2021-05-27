@@ -2,5 +2,5 @@
   "port" : 5000,
   "mongoUri" : "mongodb+srv://Iskander:SeueZCXarYAB734F@cluster0.3dctp.mongodb.net/Shortest_Url?retryWrites=true&w=majority",
   "jwtSecret" : "danil kladninstki sosi huy",
-  "baseUrl" : "http://localhost:5000"
+  "baseUrl": "http://localhost:5000"
 }
